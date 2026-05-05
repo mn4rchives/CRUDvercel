@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Mongo Vibe-Check</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass-card { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+        }
+        .vibe-gradient {
+            background: linear-gradient(90deg, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        input { background: #334155 !important; border: 1px solid #475569 !important; color: white !important; }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-12 text-center">
+            <h1 class="text-5xl font-black mb-2 uppercase tracking-tighter vibe-gradient">Mongo Flask Lab</h1>
+            <p class="text-slate-400">Endpoint: <code class="text-pink-400">http://127.0.0.1:5000/users</code></p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- FORM SECTION -->
+            <section class="glass-card p-6 rounded-2xl shadow-2xl">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <span class="mr-2">👤</span> Create / Update User
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">User ID (Leave blank for New)</label>
+                        <input type="text" id="userId" placeholder="Auto-generated" class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Name</label>
+                        <input type="text" id="userName" placeholder="Enter name..." class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Extra Data (JSON)</label>
+                        <input type="text" id="userData" placeholder='{"role": "Admin"}' class="w-full p-3 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 transition-all">
+                    </div>
+                    <button onclick="saveUser()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 py-3 rounded-lg font-bold transition-all transform hover:scale-[1.02] active:scale-95">
+                        SEND TO DATABASE
+                    </button>
+                    <button onclick="clearForm()" class="w-full text-slate-400 text-sm hover:text-white transition-colors">Clear Form</button>
+                </div>
+            </section>
+
+            <!-- DATA SECTION -->
+            <section class="glass-card p-6 rounded-2xl shadow-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">📋 User List</h2>
+                    <button onclick="fetchUsers()" class="text-xs bg-slate-700 px-3 py-1 rounded-full hover:bg-slate-600 transition-colors">REFRESH</button>
+                </div>
+                <div id="userList" class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                    <!-- Users will be injected here -->
+                    <p class="text-slate-500 italic">No users found. Hit refresh or add one!</p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:5000/users';
+
+        // Fetch All Users
+        async function fetchUsers() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                const list = document.getElementById('userList');
+                list.innerHTML = '';
+                
+                data.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = 'bg-slate-800/50 p-4 rounded-xl border border-slate-700 flex justify-between items-center group';
+                    div.innerHTML = `
+                        <div>
+                            <p class="font-bold text-pink-400">${user.name}</p>
+                            <p class="text-[10px] text-slate-500 font-mono">${user._id}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editUser('${user._id}', '${user.name}')" class="p-2 hover:bg-purple-500/20 rounded-lg text-purple-400">✏️</button>
+                            <button onclick="deleteUser('${user._id}')" class="p-2 hover:bg-red-500/20 rounded-lg text-red-400">🗑️</button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch (err) {
+                console.error("Vibe check failed:", err);
+            }
+        }
+
+        // Create or Update
+        async function saveUser() {
+            const id = document.getElementById('userId').value;
+            const name = document.getElementById('userName').value;
+            const extraData = document.getElementById('userData').value;
+            
+            let payload = { name };
+            if (extraData) {
+                try { Object.assign(payload, JSON.parse(extraData)); } catch(e) { alert("Invalid JSON in Extra Data"); return; }
+            }
+
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${API_URL}/${id}` : API_URL;
+
+            await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            clearForm();
+            fetchUsers();
+        }
+
+        // Delete
+        async function deleteUser(id) {
+            if(confirm('Delete this user?')) {
+                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                fetchUsers();
+            }
+        }
+
+        // Helpers
+        function editUser(id, name) {
+            document.getElementById('userId').value = id;
+            document.getElementById('userName').value = name;
+        }
+
+        function clearForm() {
+            document.getElementById('userId').value = '';
+            document.getElementById('userName').value = '';
+            document.getElementById('userData').value = '';
+        }
+
+        // Initial Load
+        fetchUsers();
+    </script>
+</body>
+</html>
