@@ -1,22 +1,21 @@
-# ใช้ Python Image ที่มีขนาดเล็กและปลอดภัย
-FROM python:3.9-slim-buster
+# ใช้ Python แบบ slim เพื่อลดขนาด Image
+FROM python:3.9-slim
 
-# กำหนด Working Directory ใน Container
+# ตั้งค่า Working Directory
 WORKDIR /app
 
-# ป้องกันไม่ให้ Python เขียนไฟล์ .pyc และให้ Output แสดงผลทันที (Real-time log)
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# คัดลอกไฟล์ requirements.txt เข้าไปก่อนเพื่อทำ Layer Caching
+# (สร้างไฟล์ requirements.txt ด้วยนะครับ)
+COPY requirements.txt .
 
 # ติดตั้ง dependencies
-COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# คัดลอก Code ทั้งหมดเข้า Container
+# คัดลอกโค้ดทั้งหมดเข้า Container
 COPY . .
 
-# ใช้ Gunicorn แทน Flask Development Server เพื่อความปลอดภัยและประสิทธิภาพ (Production ready)
-RUN pip install gunicorn
+# กำหนด Port (Vercel หรือ Cloud Platform มักใช้ 8080 หรือ 5000)
+EXPOSE 5000
 
-# สั่งรันแอป โดยใช้ Port 5000 (หรือตามที่ Vercel/Cloud กำหนด)
+# ใช้ Gunicorn แทน app.run() เพื่อความเสถียรใน Production
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
